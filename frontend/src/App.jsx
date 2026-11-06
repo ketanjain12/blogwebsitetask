@@ -1,11 +1,924 @@
-import{useEffect,useState}from'react';
-import React from 'react';
-import{Routes,Route,Link,NavLink,useNavigate,useParams,Navigate}from'react-router-dom';import{BookOpen,ArrowRight,Search,Clock3,LogOut,LayoutDashboard,FileText,Users,Plus,Trash2,Edit3,Menu,X,ArrowLeft}from'lucide-react';import api from'./api';import{useAuth}from'./state';import{Ad}from'./Ads';
-function Shell({children}){const{user,logout}=useAuth(),[menu,setMenu]=useState(false),nav=useNavigate();return <div className="shell"><header className="header"><Link to="/" className="brand"><span className="mark"><BookOpen/></span>blogspace<span>.</span></Link><nav><Link to="/">Discover</Link><a href="/#stories">Latest stories</a><a href="/#about">About</a></nav><div className="head-actions">{user?<>{user.role==='admin'&&<Link className="btn light" to="/admin">Admin</Link>}<span className="welcome">Hi, {user.name.split(' ')[0]}</span><button className="btn light" onClick={()=>{logout();nav('/')}}>Logout</button></>:<><Link className="btn light" to="/login">Log in</Link><Link className="btn primary" to="/register">Join BlogSpace ↗</Link></>}</div><button className="mobile-toggle" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button></header>{menu&&<div className="mobile-menu"><Link to="/">Discover</Link><Link to="/login">Log in</Link><Link to="/register">Create account</Link></div>}<main>{children}</main><Ad placement="bottom_banner"/><footer>© {new Date().getFullYear()} BlogSpace. Made for curious minds.</footer><div className="sticky"><Ad placement="sticky_footer"/></div></div>}
-function Card({p}){return <article className="card"><Link to={`/post/${p.slug}`} className="cover"><img src={p.cover_image} alt=""/></Link><div className="cardbody"><span className="tag">{p.category}</span><span className="read"><Clock3 size={13}/> {p.read_time} min read</span><Link to={`/post/${p.slug}`}><h3>{p.title}</h3></Link><p>{p.excerpt}</p><div className="cardfoot">By {p.author_name||'BlogSpace Team'} <Link to={`/post/${p.slug}`}>Read story ↗</Link></div></div></article>}
-function Home(){const[posts,setPosts]=useState([]),[q,setQ]=useState(''),[cat,setCat]=useState('All');useEffect(()=>{api.get('/posts').then(r=>setPosts(r.data.posts)).catch(()=>{})},[]);const list=posts.filter(p=>(cat==='All'||p.category===cat)&&`${p.title} ${p.excerpt}`.toLowerCase().includes(q.toLowerCase()));return <Shell><section className="hero"><div><div className="eyebrow">✦ &nbsp; A JOURNAL FOR CURIOUS MINDS</div><h1>Ideas worth<br/><em>spending time on.</em></h1><p>Thoughtful stories, practical ideas and fresh perspectives to help you make more of every day.</p><a className="btn primary big" href="#stories">Explore stories <ArrowRight size={17}/></a><div className="hero-meta">✧ Fresh perspectives　　✧ Ideas that move you</div></div><div className="hero-art"><img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=85"/><div className="float">✦ &nbsp; Make space for ideas<br/><small>One good thought at a time.</small></div></div></section><Ad placement="top_banner"/><section id="stories" className="stories"><div className="kicker">THE READING ROOM</div><h2>Stories to explore<span>.</span></h2><div className="tools"><div className="search"><Search/><input placeholder="Search stories..." value={q} onChange={e=>setQ(e.target.value)}/></div><div className="filters">{['All','Lifestyle','Writing','Productivity','Technology','Design'].map(c=><button className={cat===c?'chosen':''} onClick={()=>setCat(c)} key={c}>{c}</button>)}</div></div><div className="grid">{list.map(p=><Card key={p.id} p={p}/>)}</div>{!list.length&&<p className="empty">No stories found. Try another search.</p>}<div className="adspace"><Ad placement="in_content_2"/></div></section><section id="about" className="about"><div><small>WHY BLOGSPACE</small><h2>Good ideas deserve<br/>a little more space.</h2></div><p>A calm corner of the internet for useful knowledge, honest perspectives and stories that stay with you. Take a breath, find a new idea, and keep exploring.</p></section></Shell>}
-function Post(){const{slug}=useParams(),[p,setP]=useState(null),[err,setErr]=useState('');useEffect(()=>{api.get(`/posts/${slug}`).then(r=>setP(r.data.post)).catch(e=>setErr(e.response?.data?.message||'Story unavailable'))},[slug]);return <Shell>{err?<div className="empty">{err}</div>:!p?<div className="empty">Loading story…</div>:<article className="article"><Link className="back" to="/"><ArrowLeft size={16}/> All stories</Link><div className="article-head"><span className="tag">{p.category}</span><h1>{p.title}</h1><p>{p.excerpt}</p><small>By {p.author_name} · {p.read_time} min read</small></div><img className="article-img" src={p.cover_image}/><div className="article-layout"><div className="article-text">{p.content.split(/\n+/).map((x,i)=><p key={i}>{x}</p>)}<Ad placement="in_content_1"/></div><aside className="article-sidebar"><Ad placement="sidebar"/></aside></div></article>}</Shell>}
-function Auth({register=false}){const{login,register:signup}=useAuth(),nav=useNavigate(),[v,setV]=useState({name:'',email:'',password:''}),[err,setErr]=useState(''),[busy,setBusy]=useState(false);const submit=async e=>{e.preventDefault();setBusy(true);setErr('');try{const u=register?await signup(v.name,v.email,v.password):await login(v.email,v.password);nav(u.role==='admin'?'/admin':'/')}catch(e){setErr(e.response?.data?.message||'Please try again')}finally{setBusy(false)}};return <div className="auth"><div className="authbox"><div className="authvisual"><Link className="brand white" to="/">▣ blogspace.</Link><h1>{register?'A fresh page.':'Make room for'}<br/><em>{register?'A new perspective.':'the work that matters.'}</em></h1><p>A calmer way to read, learn and move your ideas forward.</p></div><div className="authform"><small>{register?'GET STARTED':'WELCOME BACK'}</small><h2>{register?'Create your account':'Sign in to BlogSpace'}</h2><p>{register?'Join a community of curious readers.':'Pick up right where you left off.'}</p>{err&&<div className="error">{err}</div>}<form onSubmit={submit}>{register&&<label>Full name<input required minLength="2" value={v.name} onChange={e=>setV({...v,name:e.target.value})}/></label>}<label>Email address<input type="email" required value={v.email} onChange={e=>setV({...v,email:e.target.value})}/></label><label>Password<input type="password" minLength="8" required value={v.password} onChange={e=>setV({...v,password:e.target.value})}/></label><button className="btn primary full" disabled={busy}>{busy?'Please wait…':register?'Create account':'Sign in'} →</button></form><p className="switch">{register?'Already have an account?':'Don’t have an account?'} <Link to={register?'/login':'/register'}>{register?'Sign in':'Create one'}</Link></p></div></div></div>}
-function Admin(){const{user,logout}=useAuth(),nav=useNavigate(),[tab,setTab]=useState('overview'),[stats,setStats]=useState({}),[posts,setPosts]=useState([]),[users,setUsers]=useState([]),[show,setShow]=useState(false),[editing,setEditing]=useState(null),[form,setForm]=useState({title:'',excerpt:'',content:'',category:'Lifestyle',cover_image:'',status:'draft'}),[err,setErr]=useState('');const load=async()=>{try{const[a,b,c]=await Promise.all([api.get('/admin/stats'),api.get('/admin/posts'),api.get('/admin/users')]);setStats(a.data.stats);setPosts(b.data.posts);setUsers(c.data.users)}catch(e){setErr(e.response?.data?.message||'Unable to load admin data')}};useEffect(()=>{if(user?.role!=='admin'){nav('/');return}load()},[user]);const save=async e=>{e.preventDefault();try{if(editing)await api.put(`/admin/posts/${editing}`,form);else await api.post('/admin/posts',form);setShow(false);setEditing(null);setForm({title:'',excerpt:'',content:'',category:'Lifestyle',cover_image:'',status:'draft'});load()}catch(e){setErr(e.response?.data?.message||'Save failed')}};if(user?.role!=='admin')return null;return <div className="admin"><aside><Link className="brand white" to="/">▣ blogspace.</Link><small>WORKSPACE</small>{[['overview','▦ Overview'],['posts','▤ Posts'],['users','♙ Users']].map(x=><button className={tab===x[0]?'active':''} onClick={()=>setTab(x[0])}>{x[1]}</button>)}<button className="signout" onClick={()=>{logout();nav('/')}}>↗ Sign out</button></aside><main><header><div><small>BLOGSPACE / ADMIN</small><h1>{tab==='overview'?'Overview':tab==='posts'?'Posts':'Users'}</h1></div><span>{user.name}</span></header>{err&&<p className="error">{err}</p>}{tab==='overview'&&<><h2>Good to see you, {user.name.split(' ')[0]}.</h2><div className="stats">{[['Readers',stats.users],['All posts',stats.posts],['Published',stats.published],['Drafts',stats.drafts]].map(x=><div><small>{x[0]}</small><b>{x[1]??'—'}</b></div>)}</div><div className="panel"><h3>Recent stories</h3>{(posts||[]).slice(0,5).map(p=><p className="row">{p.title}<span>{p.status}</span></p>)}</div></>}{tab==='posts'&&<><div className="between"><h2>Manage stories</h2><button className="btn primary" onClick={()=>{setEditing(null);setForm({title:'',excerpt:'',content:'',category:'Lifestyle',cover_image:'',status:'draft'});setShow(!show)}}><Plus size={16}/> New post</button></div>{show&&<form className="panel editor" onSubmit={save}><h3>{editing?'Edit post':'Create post'}</h3>{[['title','Title'],['excerpt','Excerpt'],['cover_image','Cover image URL'],['content','Content']].map(([k,l])=><label>{l}{k==='content'||k==='excerpt'?<textarea required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>:<input required={k!=='cover_image'} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>}</label>)}<label>Status<select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option>draft</option><option>published</option></select></label><button className="btn primary">Save post</button></form>}<div className="panel">{posts.map(p=><div className="row"><b>{p.title}</b><span>{p.status}</span><button onClick={()=>{setEditing(p.id);setForm(p);setShow(true)}}><Edit3 size={15}/></button><button onClick={async()=>{if(confirm('Delete this post?')){await api.delete(`/admin/posts/${p.id}`);load()}}}><Trash2 size={15}/></button></div>)}</div></>}{tab==='users'&&<div className="panel"><h2>Community users</h2>{users.map(u=><div className="row"><div><b>{u.name}</b><small>{u.email}</small></div><span>{u.is_active?'Active':'Disabled'}</span><button onClick={async()=>{await api.put(`/admin/users/${u.id}`,{is_active:!u.is_active});load()}}>Toggle</button>{u.role==='user'&&<button onClick={async()=>{if(confirm('Delete user?')){await api.delete(`/admin/users/${u.id}`);load()}}}>Delete</button>}</div>)}</div>}</main></div>}
-function Guard({children}){const{user,loading}=useAuth();if(loading)return <div className="empty">Loading…</div>;return !user?<Navigate to="/login"/>:user.role!=='admin'?<Navigate to="/"/>:children}
-export default function App(){return <Routes><Route path="/" element={<Home/>}/><Route path="/post/:slug" element={<Post/>}/><Route path="/login" element={<Auth/>}/><Route path="/register" element={<Auth register/>}/><Route path="/admin" element={<Guard><Admin/></Guard>}/><Route path="*" element={<Navigate to="/"/>}/></Routes>}
+// import { useEffect, useState } from 'react';
+// import React from 'react';
+// import { GoogleTestAd } from './GoogleTestAd';
+// import { Routes, Route, Link, NavLink, useNavigate, useParams, Navigate } from 'react-router-dom'; import { BookOpen, ArrowRight, Search, Clock3, LogOut, LayoutDashboard, FileText, Users, Plus, Trash2, Edit3, Menu, X, ArrowLeft } from 'lucide-react'; import api from './api'; import { useAuth } from './state'; import { Ad } from './Ads';
+// function Shell({ children }) { const { user, logout } = useAuth(), [menu, setMenu] = useState(false), nav = useNavigate(); return <div className="shell"><header className="header"><Link to="/" className="brand"><span className="mark"><BookOpen /></span>blogspace<span>.</span></Link><nav><Link to="/">Discover</Link><a href="/#stories">Latest stories</a><a href="/#about">About</a></nav><div className="head-actions">{user ? <>{user.role === 'admin' && <Link className="btn light" to="/admin">Admin</Link>}<span className="welcome">Hi, {user.name.split(' ')[0]}</span><button className="btn light" onClick={() => { logout(); nav('/') }}>Logout</button></> : <><Link className="btn light" to="/login">Log in</Link><Link className="btn primary" to="/register">Join BlogSpace ↗</Link></>}</div><button className="mobile-toggle" onClick={() => setMenu(!menu)}>{menu ? <X /> : <Menu />}</button></header>{menu && <div className="mobile-menu"><Link to="/">Discover</Link><Link to="/login">Log in</Link><Link to="/register">Create account</Link></div>}<main>{children}</main><Ad placement="bottom_banner" /><footer>© {new Date().getFullYear()} BlogSpace. Made for curious minds.</footer><div className="sticky"><Ad placement="sticky_footer" /></div></div> }
+// function Card({ p }) { return <article className="card"><Link to={`/post/${p.slug}`} className="cover"><img src={p.cover_image} alt="" /></Link><div className="cardbody"><span className="tag">{p.category}</span><span className="read"><Clock3 size={13} /> {p.read_time} min read</span><Link to={`/post/${p.slug}`}><h3>{p.title}</h3></Link><p>{p.excerpt}</p><div className="cardfoot">By {p.author_name || 'BlogSpace Team'} <Link to={`/post/${p.slug}`}>Read story ↗</Link></div></div></article> }
+// function Home() { const [posts, setPosts] = useState([]), [q, setQ] = useState(''), [cat, setCat] = useState('All'); useEffect(() => { api.get('/posts').then(r => setPosts(r.data.posts)).catch(() => { }) }, []); const list = posts.filter(p => (cat === 'All' || p.category === cat) && `${p.title} ${p.excerpt}`.toLowerCase().includes(q.toLowerCase())); return <Shell><section className="hero"><div><div className="eyebrow">✦ &nbsp; A JOURNAL FOR CURIOUS MINDS</div><h1>Ideas worth<br /><em>spending time on.</em></h1><p>Thoughtful stories, practical ideas and fresh perspectives to help you make more of every day.</p><a className="btn primary big" href="#stories">Explore stories <ArrowRight size={17} /></a><div className="hero-meta">✧ Fresh perspectives　　✧ Ideas that move you</div></div><div className="hero-art"><img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=85" /><div className="float">✦ &nbsp; Make space for ideas<br /><small>One good thought at a time.</small></div></div></section><Ad placement="top_banner" /><section id="stories" className="stories"><div className="kicker">THE READING ROOM</div><h2>Stories to explore<span>.</span></h2><div className="tools"><div className="search"><Search /><input placeholder="Search stories..." value={q} onChange={e => setQ(e.target.value)} /></div><div className="filters">{['All', 'Lifestyle', 'Writing', 'Productivity', 'Technology', 'Design'].map(c => <button className={cat === c ? 'chosen' : ''} onClick={() => setCat(c)} key={c}>{c}</button>)}</div></div><div className="grid">{list.map(p => <Card key={p.id} p={p} />)}</div>{!list.length && <p className="empty">No stories found. Try another search.</p>}<div className="adspace"><Ad placement="in_content_2" /></div></section><section id="about" className="about"><div><small>WHY BLOGSPACE</small><h2>Good ideas deserve<br />a little more space.</h2></div><p>A calm corner of the internet for useful knowledge, honest perspectives and stories that stay with you. Take a breath, find a new idea, and keep exploring.</p></section></Shell> }
+// function Post() { const { slug } = useParams(), [p, setP] = useState(null), [err, setErr] = useState(''); useEffect(() => { api.get(`/posts/${slug}`).then(r => setP(r.data.post)).catch(e => setErr(e.response?.data?.message || 'Story unavailable')) }, [slug]); return <Shell>{err ? <div className="empty">{err}</div> : !p ? <div className="empty">Loading story…</div> : <article className="article"><Link className="back" to="/"><ArrowLeft size={16} /> All stories</Link><div className="article-head"><span className="tag">{p.category}</span><h1>{p.title}</h1><p>{p.excerpt}</p><small>By {p.author_name} · {p.read_time} min read</small></div><img className="article-img" src={p.cover_image} /><div className="article-layout"><div className="article-text">{p.content.split(/\n+/).map((x, i) => <p key={i}>{x}</p>)}<Ad placement="in_content_1" /></div><aside className="article-sidebar"><Ad placement="sidebar" /></aside></div></article>}</Shell> }
+// function Auth({ register = false }) { const { login, register: signup } = useAuth(), nav = useNavigate(), [v, setV] = useState({ name: '', email: '', password: '' }), [err, setErr] = useState(''), [busy, setBusy] = useState(false); const submit = async e => { e.preventDefault(); setBusy(true); setErr(''); try { const u = register ? await signup(v.name, v.email, v.password) : await login(v.email, v.password); nav(u.role === 'admin' ? '/admin' : '/') } catch (e) { setErr(e.response?.data?.message || 'Please try again') } finally { setBusy(false) } }; return <div className="auth"><div className="authbox"><div className="authvisual"><Link className="brand white" to="/">▣ blogspace.</Link><h1>{register ? 'A fresh page.' : 'Make room for'}<br /><em>{register ? 'A new perspective.' : 'the work that matters.'}</em></h1><p>A calmer way to read, learn and move your ideas forward.</p></div><div className="authform"><small>{register ? 'GET STARTED' : 'WELCOME BACK'}</small><h2>{register ? 'Create your account' : 'Sign in to BlogSpace'}</h2><p>{register ? 'Join a community of curious readers.' : 'Pick up right where you left off.'}</p>{err && <div className="error">{err}</div>}<form onSubmit={submit}>{register && <label>Full name<input required minLength="2" value={v.name} onChange={e => setV({ ...v, name: e.target.value })} /></label>}<label>Email address<input type="email" required value={v.email} onChange={e => setV({ ...v, email: e.target.value })} /></label><label>Password<input type="password" minLength="8" required value={v.password} onChange={e => setV({ ...v, password: e.target.value })} /></label><button className="btn primary full" disabled={busy}>{busy ? 'Please wait…' : register ? 'Create account' : 'Sign in'} →</button></form><p className="switch">{register ? 'Already have an account?' : 'Don’t have an account?'} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create one'}</Link></p></div></div></div> }
+// function Admin() { const { user, logout } = useAuth(), nav = useNavigate(), [tab, setTab] = useState('overview'), [stats, setStats] = useState({}), [posts, setPosts] = useState([]), [users, setUsers] = useState([]), [show, setShow] = useState(false), [editing, setEditing] = useState(null), [form, setForm] = useState({ title: '', excerpt: '', content: '', category: 'Lifestyle', cover_image: '', status: 'draft' }), [err, setErr] = useState(''); const load = async () => { try { const [a, b, c] = await Promise.all([api.get('/admin/stats'), api.get('/admin/posts'), api.get('/admin/users')]); setStats(a.data.stats); setPosts(b.data.posts); setUsers(c.data.users) } catch (e) { setErr(e.response?.data?.message || 'Unable to load admin data') } }; useEffect(() => { if (user?.role !== 'admin') { nav('/'); return } load() }, [user]); const save = async e => { e.preventDefault(); try { if (editing) await api.put(`/admin/posts/${editing}`, form); else await api.post('/admin/posts', form); setShow(false); setEditing(null); setForm({ title: '', excerpt: '', content: '', category: 'Lifestyle', cover_image: '', status: 'draft' }); load() } catch (e) { setErr(e.response?.data?.message || 'Save failed') } }; if (user?.role !== 'admin') return null; return <div className="admin"><aside><Link className="brand white" to="/">▣ blogspace.</Link><small>WORKSPACE</small>{[['overview', '▦ Overview'], ['posts', '▤ Posts'], ['users', '♙ Users']].map(x => <button className={tab === x[0] ? 'active' : ''} onClick={() => setTab(x[0])}>{x[1]}</button>)}<button className="signout" onClick={() => { logout(); nav('/') }}>↗ Sign out</button></aside><main><header><div><small>BLOGSPACE / ADMIN</small><h1>{tab === 'overview' ? 'Overview' : tab === 'posts' ? 'Posts' : 'Users'}</h1></div><span>{user.name}</span></header>{err && <p className="error">{err}</p>}{tab === 'overview' && <><h2>Good to see you, {user.name.split(' ')[0]}.</h2><div className="stats">{[['Readers', stats.users], ['All posts', stats.posts], ['Published', stats.published], ['Drafts', stats.drafts]].map(x => <div><small>{x[0]}</small><b>{x[1] ?? '—'}</b></div>)}</div><div className="panel"><h3>Recent stories</h3>{(posts || []).slice(0, 5).map(p => <p className="row">{p.title}<span>{p.status}</span></p>)}</div></>}{tab === 'posts' && <><div className="between"><h2>Manage stories</h2><button className="btn primary" onClick={() => { setEditing(null); setForm({ title: '', excerpt: '', content: '', category: 'Lifestyle', cover_image: '', status: 'draft' }); setShow(!show) }}><Plus size={16} /> New post</button></div>{show && <form className="panel editor" onSubmit={save}><h3>{editing ? 'Edit post' : 'Create post'}</h3>{[['title', 'Title'], ['excerpt', 'Excerpt'], ['cover_image', 'Cover image URL'], ['content', 'Content']].map(([k, l]) => <label>{l}{k === 'content' || k === 'excerpt' ? <textarea required value={form[k]} onChange={e => setForm({ ...form, [k]: e.target.value })} /> : <input required={k !== 'cover_image'} value={form[k]} onChange={e => setForm({ ...form, [k]: e.target.value })} />}</label>)}<label>Status<select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option>draft</option><option>published</option></select></label><button className="btn primary">Save post</button></form>}<div className="panel">{posts.map(p => <div className="row"><b>{p.title}</b><span>{p.status}</span><button onClick={() => { setEditing(p.id); setForm(p); setShow(true) }}><Edit3 size={15} /></button><button onClick={async () => { if (confirm('Delete this post?')) { await api.delete(`/admin/posts/${p.id}`); load() } }}><Trash2 size={15} /></button></div>)}</div></>}{tab === 'users' && <div className="panel"><h2>Community users</h2>{users.map(u => <div className="row"><div><b>{u.name}</b><small>{u.email}</small></div><span>{u.is_active ? 'Active' : 'Disabled'}</span><button onClick={async () => { await api.put(`/admin/users/${u.id}`, { is_active: !u.is_active }); load() }}>Toggle</button>{u.role === 'user' && <button onClick={async () => { if (confirm('Delete user?')) { await api.delete(`/admin/users/${u.id}`); load() } }}>Delete</button>}</div>)}</div>}</main></div> }
+// function Guard({ children }) { const { user, loading } = useAuth(); if (loading) return <div className="empty">Loading…</div>; return !user ? <Navigate to="/login" /> : user.role !== 'admin' ? <Navigate to="/" /> : children }
+// export default function App() { return <Routes><Route path="/" element={<Home />} /><Route path="/post/:slug" element={<Post />} /><Route path="/login" element={<Auth />} /><Route path="/register" element={<Auth register />} /><Route path="/admin" element={<Guard><Admin /></Guard>} /><Route path="*" element={<Navigate to="/" />} /></Routes> }
+
+
+
+import React, { useEffect, useState } from 'react';
+import {
+  Routes,
+  Route,
+  Link,
+  NavLink,
+  useNavigate,
+  useParams,
+  Navigate
+} from 'react-router-dom';
+
+import {
+  BookOpen,
+  ArrowRight,
+  Search,
+  Clock3,
+  LogOut,
+  LayoutDashboard,
+  FileText,
+  Users,
+  Plus,
+  Trash2,
+  Edit3,
+  Menu,
+  X,
+  ArrowLeft
+} from 'lucide-react';
+
+import api from './api';
+import { useAuth } from './state';
+import { Ad } from './Ads';
+import { GoogleTestAd } from './GoogleTestAd';
+
+
+// ==================== SHELL ====================
+
+function Shell({ children }) {
+  const { user, logout } = useAuth();
+  const [menu, setMenu] = useState(false);
+  const nav = useNavigate();
+
+  return (
+    <div className="shell">
+
+      <header className="header">
+        <Link to="/" className="brand">
+          <span className="mark"><BookOpen /></span>
+          blogspace<span>.</span>
+        </Link>
+
+        <nav>
+          <Link to="/">Discover</Link>
+          <a href="/#stories">Latest stories</a>
+          <a href="/#about">About</a>
+        </nav>
+
+        <div className="head-actions">
+          {user ? (
+            <>
+              {user.role === 'admin' && (
+                <Link className="btn light" to="/admin">
+                  Admin
+                </Link>
+              )}
+
+              <span className="welcome">
+                Hi, {user.name.split(' ')[0]}
+              </span>
+
+              <button
+                className="btn light"
+                onClick={() => {
+                  logout();
+                  nav('/');
+                }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link className="btn light" to="/login">
+                Log in
+              </Link>
+
+              <Link className="btn primary" to="/register">
+                Join BlogSpace ↗
+              </Link>
+            </>
+          )}
+        </div>
+
+        <button
+          className="mobile-toggle"
+          onClick={() => setMenu(!menu)}
+        >
+          {menu ? <X /> : <Menu />}
+        </button>
+      </header>
+
+      {menu && (
+        <div className="mobile-menu">
+          <Link to="/">Discover</Link>
+          <Link to="/login">Log in</Link>
+          <Link to="/register">Create account</Link>
+        </div>
+      )}
+
+      <main>{children}</main>
+
+      <footer>
+        © {new Date().getFullYear()} BlogSpace. Made for curious minds.
+      </footer>
+
+    </div>
+  );
+}
+
+
+// ==================== POST CARD ====================
+
+function Card({ p }) {
+  return (
+    <article className="card">
+      <Link to={`/post/${p.slug}`} className="cover">
+        <img src={p.cover_image} alt="" />
+      </Link>
+
+      <div className="cardbody">
+        <span className="tag">{p.category}</span>
+
+        <span className="read">
+          <Clock3 size={13} /> {p.read_time} min read
+        </span>
+
+        <Link to={`/post/${p.slug}`}>
+          <h3>{p.title}</h3>
+        </Link>
+
+        <p>{p.excerpt}</p>
+
+        <div className="cardfoot">
+          By {p.author_name || 'BlogSpace Team'}
+
+          <Link to={`/post/${p.slug}`}>
+            Read story ↗
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+
+// ==================== HOME PAGE ====================
+
+function Home() {
+  const [posts, setPosts] = useState([]);
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState('All');
+
+  useEffect(() => {
+    api.get('/posts')
+      .then(r => setPosts(r.data.posts))
+      .catch(() => {});
+  }, []);
+
+  const list = posts.filter(p =>
+    (cat === 'All' || p.category === cat) &&
+    `${p.title} ${p.excerpt}`.toLowerCase().includes(q.toLowerCase())
+  );
+
+  return (
+    <Shell>
+
+      {/* HERO SECTION */}
+
+      <section className="hero">
+        <div>
+          <div className="eyebrow">
+            ✦ &nbsp; A JOURNAL FOR CURIOUS MINDS
+          </div>
+
+          <h1>
+            Ideas worth<br />
+            <em>spending time on.</em>
+          </h1>
+
+          <p>
+            Thoughtful stories, practical ideas and fresh perspectives
+            to help you make more of every day.
+          </p>
+
+          <a className="btn primary big" href="#stories">
+            Explore stories <ArrowRight size={17} />
+          </a>
+
+          <div className="hero-meta">
+            ✧ Fresh perspectives　　✧ Ideas that move you
+          </div>
+        </div>
+
+        <div className="hero-art">
+          <img
+            src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=85"
+            alt="Writing desk"
+          />
+
+          <div className="float">
+            ✦ &nbsp; Make space for ideas
+            <br />
+            <small>One good thought at a time.</small>
+          </div>
+        </div>
+      </section>
+
+
+      {/* GOOGLE TEST AD 1 - BELOW HERO */}
+
+      <GoogleTestAd placement="home-top-ad" />
+
+
+      {/* STORIES SECTION */}
+
+      <section id="stories" className="stories">
+
+        <div className="kicker">THE READING ROOM</div>
+
+        <h2>
+          Stories to explore<span>.</span>
+        </h2>
+
+        {/* SEARCH AND CATEGORY FILTER */}
+
+        <div className="tools">
+
+          <div className="search">
+            <Search />
+
+            <input
+              placeholder="Search stories..."
+              value={q}
+              onChange={e => setQ(e.target.value)}
+            />
+          </div>
+
+          <div className="filters">
+            {[
+              'All',
+              'Lifestyle',
+              'Writing',
+              'Productivity',
+              'Technology',
+              'Design'
+            ].map(c => (
+              <button
+                className={cat === c ? 'chosen' : ''}
+                onClick={() => setCat(c)}
+                key={c}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
+        </div>
+
+
+        {/* GOOGLE TEST AD 2 - BELOW FILTERS */}
+
+        <GoogleTestAd placement="home-middle-ad" />
+
+
+        {/* STORY GRID */}
+
+        <div className="grid">
+          {list.map(p => (
+            <Card key={p.id} p={p} />
+          ))}
+        </div>
+
+        {!list.length && (
+          <p className="empty">
+            No stories found. Try another search.
+          </p>
+        )}
+
+
+        {/* GOOGLE TEST AD 3 - BELOW STORIES */}
+
+        <GoogleTestAd placement="home-bottom-ad" />
+
+      </section>
+
+
+      {/* ABOUT SECTION */}
+
+      <section id="about" className="about">
+        <div>
+          <small>WHY BLOGSPACE</small>
+
+          <h2>
+            Good ideas deserve<br />
+            a little more space.
+          </h2>
+        </div>
+
+        <p>
+          A calm corner of the internet for useful knowledge,
+          honest perspectives and stories that stay with you.
+          Take a breath, find a new idea, and keep exploring.
+        </p>
+      </section>
+
+    </Shell>
+  );
+}
+
+
+// ==================== SINGLE POST PAGE ====================
+
+function Post() {
+  const { slug } = useParams();
+  const [p, setP] = useState(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    api.get(`/posts/${slug}`)
+      .then(r => setP(r.data.post))
+      .catch(e =>
+        setErr(e.response?.data?.message || 'Story unavailable')
+      );
+  }, [slug]);
+
+  return (
+    <Shell>
+
+      {err ? (
+        <div className="empty">{err}</div>
+      ) : !p ? (
+        <div className="empty">Loading story…</div>
+      ) : (
+
+        <article className="article">
+
+          <Link className="back" to="/">
+            <ArrowLeft size={16} /> All stories
+          </Link>
+
+          <div className="article-head">
+            <span className="tag">{p.category}</span>
+
+            <h1>{p.title}</h1>
+
+            <p>{p.excerpt}</p>
+
+            <small>
+              By {p.author_name} · {p.read_time} min read
+            </small>
+          </div>
+
+          <img
+            className="article-img"
+            src={p.cover_image}
+            alt={p.title}
+          />
+
+          <div className="article-layout">
+
+            <div className="article-text">
+              {p.content.split(/\n+/).map((x, i) => (
+                <p key={i}>{x}</p>
+              ))}
+
+              <Ad placement="in_content_1" />
+            </div>
+
+            <aside className="article-sidebar">
+              <Ad placement="sidebar" />
+            </aside>
+
+          </div>
+
+        </article>
+      )}
+
+    </Shell>
+  );
+}
+
+
+// ==================== LOGIN / REGISTER ====================
+
+function Auth({ register = false }) {
+  const { login, register: signup } = useAuth();
+  const nav = useNavigate();
+
+  const [v, setV] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async e => {
+    e.preventDefault();
+    setBusy(true);
+    setErr('');
+
+    try {
+      const u = register
+        ? await signup(v.name, v.email, v.password)
+        : await login(v.email, v.password);
+
+      nav(u.role === 'admin' ? '/admin' : '/');
+
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Please try again');
+
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="auth">
+      <div className="authbox">
+
+        <div className="authvisual">
+          <Link className="brand white" to="/">
+            ▣ blogspace.
+          </Link>
+
+          <h1>
+            {register ? 'A fresh page.' : 'Make room for'}
+            <br />
+            <em>
+              {register
+                ? 'A new perspective.'
+                : 'the work that matters.'}
+            </em>
+          </h1>
+
+          <p>
+            A calmer way to read, learn and move your ideas forward.
+          </p>
+        </div>
+
+        <div className="authform">
+          <small>{register ? 'GET STARTED' : 'WELCOME BACK'}</small>
+
+          <h2>
+            {register ? 'Create your account' : 'Sign in to BlogSpace'}
+          </h2>
+
+          <p>
+            {register
+              ? 'Join a community of curious readers.'
+              : 'Pick up right where you left off.'}
+          </p>
+
+          {err && <div className="error">{err}</div>}
+
+          <form onSubmit={submit}>
+
+            {register && (
+              <label>
+                Full name
+
+                <input
+                  required
+                  minLength="2"
+                  value={v.name}
+                  onChange={e =>
+                    setV({ ...v, name: e.target.value })
+                  }
+                />
+              </label>
+            )}
+
+            <label>
+              Email address
+
+              <input
+                type="email"
+                required
+                value={v.email}
+                onChange={e =>
+                  setV({ ...v, email: e.target.value })
+                }
+              />
+            </label>
+
+            <label>
+              Password
+
+              <input
+                type="password"
+                minLength="8"
+                required
+                value={v.password}
+                onChange={e =>
+                  setV({ ...v, password: e.target.value })
+                }
+              />
+            </label>
+
+            <button className="btn primary full" disabled={busy}>
+              {busy
+                ? 'Please wait…'
+                : register
+                  ? 'Create account'
+                  : 'Sign in'} →
+            </button>
+
+          </form>
+
+          <p className="switch">
+            {register
+              ? 'Already have an account?'
+              : 'Don’t have an account?'}
+
+            {' '}
+
+            <Link to={register ? '/login' : '/register'}>
+              {register ? 'Sign in' : 'Create one'}
+            </Link>
+          </p>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== ADMIN DASHBOARD ====================
+
+function Admin() {
+  const { user, logout } = useAuth();
+  const nav = useNavigate();
+
+  const [tab, setTab] = useState('overview');
+  const [stats, setStats] = useState({});
+  const [posts, setPosts] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [show, setShow] = useState(false);
+  const [editing, setEditing] = useState(null);
+
+  const [form, setForm] = useState({
+    title: '',
+    excerpt: '',
+    content: '',
+    category: 'Lifestyle',
+    cover_image: '',
+    status: 'draft'
+  });
+
+  const [err, setErr] = useState('');
+
+  const load = async () => {
+    try {
+      const [a, b, c] = await Promise.all([
+        api.get('/admin/stats'),
+        api.get('/admin/posts'),
+        api.get('/admin/users')
+      ]);
+
+      setStats(a.data.stats);
+      setPosts(b.data.posts);
+      setUsers(c.data.users);
+
+    } catch (e) {
+      setErr(
+        e.response?.data?.message || 'Unable to load admin data'
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (user?.role !== 'admin') {
+      nav('/');
+      return;
+    }
+
+    load();
+  }, [user]);
+
+  const save = async e => {
+    e.preventDefault();
+
+    try {
+      if (editing) {
+        await api.put(`/admin/posts/${editing}`, form);
+      } else {
+        await api.post('/admin/posts', form);
+      }
+
+      setShow(false);
+      setEditing(null);
+
+      setForm({
+        title: '',
+        excerpt: '',
+        content: '',
+        category: 'Lifestyle',
+        cover_image: '',
+        status: 'draft'
+      });
+
+      load();
+
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Save failed');
+    }
+  };
+
+  if (user?.role !== 'admin') return null;
+
+  return (
+    <div className="admin">
+
+      <aside>
+        <Link className="brand white" to="/">
+          ▣ blogspace.
+        </Link>
+
+        <small>WORKSPACE</small>
+
+        {[
+          ['overview', '▦ Overview'],
+          ['posts', '▤ Posts'],
+          ['users', '♙ Users']
+        ].map(x => (
+          <button
+            className={tab === x[0] ? 'active' : ''}
+            onClick={() => setTab(x[0])}
+            key={x[0]}
+          >
+            {x[1]}
+          </button>
+        ))}
+
+        <button
+          className="signout"
+          onClick={() => {
+            logout();
+            nav('/');
+          }}
+        >
+          ↗ Sign out
+        </button>
+      </aside>
+
+      <main>
+
+        <header>
+          <div>
+            <small>BLOGSPACE / ADMIN</small>
+
+            <h1>
+              {tab === 'overview'
+                ? 'Overview'
+                : tab === 'posts'
+                  ? 'Posts'
+                  : 'Users'}
+            </h1>
+          </div>
+
+          <span>{user.name}</span>
+        </header>
+
+        {err && <p className="error">{err}</p>}
+
+
+        {/* OVERVIEW */}
+
+        {tab === 'overview' && (
+          <>
+            <h2>Good to see you, {user.name.split(' ')[0]}.</h2>
+
+            <div className="stats">
+              {[
+                ['Readers', stats.users],
+                ['All posts', stats.posts],
+                ['Published', stats.published],
+                ['Drafts', stats.drafts]
+              ].map(x => (
+                <div key={x[0]}>
+                  <small>{x[0]}</small>
+                  <b>{x[1] ?? '—'}</b>
+                </div>
+              ))}
+            </div>
+
+            <div className="panel">
+              <h3>Recent stories</h3>
+
+              {(posts || []).slice(0, 5).map(p => (
+                <p className="row" key={p.id}>
+                  {p.title}
+                  <span>{p.status}</span>
+                </p>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* POSTS CRUD */}
+
+        {tab === 'posts' && (
+          <>
+            <div className="between">
+              <h2>Manage stories</h2>
+
+              <button
+                className="btn primary"
+                onClick={() => {
+                  setEditing(null);
+
+                  setForm({
+                    title: '',
+                    excerpt: '',
+                    content: '',
+                    category: 'Lifestyle',
+                    cover_image: '',
+                    status: 'draft'
+                  });
+
+                  setShow(!show);
+                }}
+              >
+                <Plus size={16} /> New post
+              </button>
+            </div>
+
+            {show && (
+              <form className="panel editor" onSubmit={save}>
+                <h3>{editing ? 'Edit post' : 'Create post'}</h3>
+
+                {[
+                  ['title', 'Title'],
+                  ['excerpt', 'Excerpt'],
+                  ['cover_image', 'Cover image URL'],
+                  ['content', 'Content']
+                ].map(([k, l]) => (
+                  <label key={k}>
+                    {l}
+
+                    {k === 'content' || k === 'excerpt' ? (
+                      <textarea
+                        required
+                        value={form[k]}
+                        onChange={e =>
+                          setForm({ ...form, [k]: e.target.value })
+                        }
+                      />
+                    ) : (
+                      <input
+                        required={k !== 'cover_image'}
+                        value={form[k]}
+                        onChange={e =>
+                          setForm({ ...form, [k]: e.target.value })
+                        }
+                      />
+                    )}
+                  </label>
+                ))}
+
+                <label>
+                  Status
+
+                  <select
+                    value={form.status}
+                    onChange={e =>
+                      setForm({ ...form, status: e.target.value })
+                    }
+                  >
+                    <option>draft</option>
+                    <option>published</option>
+                  </select>
+                </label>
+
+                <button className="btn primary">
+                  Save post
+                </button>
+              </form>
+            )}
+
+            <div className="panel">
+              {posts.map(p => (
+                <div className="row" key={p.id}>
+                  <b>{p.title}</b>
+                  <span>{p.status}</span>
+
+                  <button
+                    onClick={() => {
+                      setEditing(p.id);
+                      setForm(p);
+                      setShow(true);
+                    }}
+                  >
+                    <Edit3 size={15} />
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (confirm('Delete this post?')) {
+                        await api.delete(`/admin/posts/${p.id}`);
+                        load();
+                      }
+                    }}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* USERS */}
+
+        {tab === 'users' && (
+          <div className="panel">
+            <h2>Community users</h2>
+
+            {users.map(u => (
+              <div className="row" key={u.id}>
+                <div>
+                  <b>{u.name}</b>
+                  <small>{u.email}</small>
+                </div>
+
+                <span>{u.is_active ? 'Active' : 'Disabled'}</span>
+
+                <button
+                  onClick={async () => {
+                    await api.put(`/admin/users/${u.id}`, {
+                      is_active: !u.is_active
+                    });
+                    load();
+                  }}
+                >
+                  Toggle
+                </button>
+
+                {u.role === 'user' && (
+                  <button
+                    onClick={async () => {
+                      if (confirm('Delete user?')) {
+                        await api.delete(`/admin/users/${u.id}`);
+                        load();
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
+
+
+// ==================== ADMIN ROUTE GUARD ====================
+
+function Guard({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="empty">Loading…</div>;
+  }
+
+  return !user
+    ? <Navigate to="/login" />
+    : user.role !== 'admin'
+      ? <Navigate to="/" />
+      : children;
+}
+
+
+// ==================== MAIN APP ====================
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/post/:slug" element={<Post />} />
+      <Route path="/login" element={<Auth />} />
+      <Route path="/register" element={<Auth register />} />
+      <Route
+        path="/admin"
+        element={
+          <Guard>
+            <Admin />
+          </Guard>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+}
